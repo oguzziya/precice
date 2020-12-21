@@ -16,6 +16,13 @@ inline void addVertexToMap(boost::container::flat_map<int, Vertex *>& vertexMap,
 }
 
 inline void addEdgeToMap(boost::container::flat_map<int, Vertex *>& vertexMap, boost::container::flat_map<int, Edge *>& edgeMap, Mesh& destination, const Edge& edge){
+  if(vertexMap.count(edge.vertex(0).getID()) == 0){
+    addVertexToMap(vertexMap, destination, edge.vertex(0));
+  }
+  if(vertexMap.count(edge.vertex(1).getID()) == 0){
+    addVertexToMap(vertexMap, destination, edge.vertex(1));
+  }
+  
   Edge &e               = destination.createEdge(*vertexMap[edge.vertex(0).getID()], *vertexMap[edge.vertex(1).getID()]);
   edgeMap[edge.getID()] = &e;
 }
@@ -59,12 +66,6 @@ void filterMesh(Mesh &destination, const Mesh &source, UnaryPredicate p, bool in
       edgeMap[edge.getID()] = &e;
     } else if ((vertexMap.count(vertexIndex1) == 1 or
                 vertexMap.count(vertexIndex2) == 1) and includeConnectivity){
-      if(vertexMap.count(edge.vertex(0).getID()) == 0){
-        addVertexToMap(vertexMap, destination, edge.vertex(0));
-      }
-      if(vertexMap.count(edge.vertex(1).getID()) == 0){
-        addVertexToMap(vertexMap, destination, edge.vertex(1));
-      }
       addEdgeToMap(vertexMap, edgeMap, destination, edge);
     }
   }

@@ -1621,56 +1621,7 @@ BOOST_AUTO_TEST_CASE(ScaledConsistentMappingCase5)
   Eigen::Vector3d coordTwoE{2.2, 0.0, -0.01};
   Eigen::Vector3d coordTwoF{2.0, 1.0, 0.01};
 
-  if (context.isNamed("SolverTwo")) {
-    SolverInterface cplInterface(context.name, configFilename, context.rank, context.size);
-    const int       meshID = cplInterface.getMeshID("MeshTwo");
-    const int       dataID = cplInterface.getDataID("DataOne", meshID);
-
-    int vA = cplInterface.setMeshVertex(meshID, coordTwoA.data());
-    int vB = cplInterface.setMeshVertex(meshID, coordTwoB.data());
-    int vC = cplInterface.setMeshVertex(meshID, coordTwoC.data());
-    int vD = cplInterface.setMeshVertex(meshID, coordTwoD.data());
-    int vE = cplInterface.setMeshVertex(meshID, coordTwoE.data());
-    int vF = cplInterface.setMeshVertex(meshID, coordTwoF.data());
-
-    int eAB = cplInterface.setMeshEdge(meshID, vA, vB);
-    int eBC = cplInterface.setMeshEdge(meshID, vB, vC);
-    int eAC = cplInterface.setMeshEdge(meshID, vA, vC);
-    int eCD = cplInterface.setMeshEdge(meshID, vC, vD);
-    int eAD = cplInterface.setMeshEdge(meshID, vA, vD);
-    int eBE = cplInterface.setMeshEdge(meshID, vB, vE);
-    int eBF = cplInterface.setMeshEdge(meshID, vB, vF);
-    int eEF = cplInterface.setMeshEdge(meshID, vE, vF);
-    int eFC = cplInterface.setMeshEdge(meshID, vF, vC);
-
-    cplInterface.setMeshTriangle(meshID, eAB, eBC, eAC);
-    cplInterface.setMeshTriangle(meshID, eAD, eAC, eCD);
-    cplInterface.setMeshTriangle(meshID, eBC, eFC, eBF);
-    cplInterface.setMeshTriangle(meshID, eBE, eEF, eBF);
-
-    double maxDt = cplInterface.initialize();
-
-    double valueA, valueB, valueC, valueD, valueE, valueF;
-    cplInterface.readScalarData(dataID, vA, valueA);
-    cplInterface.readScalarData(dataID, vB, valueB);
-    cplInterface.readScalarData(dataID, vC, valueC);
-    cplInterface.readScalarData(dataID, vD, valueD);
-    cplInterface.readScalarData(dataID, vE, valueE);
-    cplInterface.readScalarData(dataID, vF, valueF);
-
-    double calculatedIntegral = (math::geometry::triangleArea(coordTwoA, coordTwoB, coordTwoC) * (valueA + valueB + valueC) +
-                                 math::geometry::triangleArea(coordTwoA, coordTwoC, coordTwoD) * (valueA + valueC + valueD) +
-                                 math::geometry::triangleArea(coordTwoB, coordTwoC, coordTwoF) * (valueB + valueC + valueF) +
-                                 math::geometry::triangleArea(coordTwoB, coordTwoE, coordTwoF) * (valueB + valueE + valueF)) /
-                                3.0;
-
-    BOOST_TEST(expectedIntegral == calculatedIntegral);
-
-    cplInterface.advance(maxDt);
-    BOOST_TEST(!cplInterface.isCouplingOngoing(), "Sending participant should have to advance once!");
-    cplInterface.finalize();
-
-  } else {
+  if (context.isNamed("SolverOne")) {
     SolverInterface cplInterface(context.name, configFilename, context.rank, context.size);
     const int       meshID = cplInterface.getMeshID("MeshOne");
     const int       dataID = cplInterface.getDataID("DataOne", meshID);
@@ -1727,9 +1678,57 @@ BOOST_AUTO_TEST_CASE(ScaledConsistentMappingCase5)
       BOOST_TEST(!cplInterface.isCouplingOngoing(), "Receiving participant should have to advance once!");
       cplInterface.finalize();
     }
+  } else {
+    SolverInterface cplInterface(context.name, configFilename, context.rank, context.size);
+    const int       meshID = cplInterface.getMeshID("MeshTwo");
+    const int       dataID = cplInterface.getDataID("DataOne", meshID);
+
+    int vA = cplInterface.setMeshVertex(meshID, coordTwoA.data());
+    int vB = cplInterface.setMeshVertex(meshID, coordTwoB.data());
+    int vC = cplInterface.setMeshVertex(meshID, coordTwoC.data());
+    int vD = cplInterface.setMeshVertex(meshID, coordTwoD.data());
+    int vE = cplInterface.setMeshVertex(meshID, coordTwoE.data());
+    int vF = cplInterface.setMeshVertex(meshID, coordTwoF.data());
+
+    int eAB = cplInterface.setMeshEdge(meshID, vA, vB);
+    int eBC = cplInterface.setMeshEdge(meshID, vB, vC);
+    int eAC = cplInterface.setMeshEdge(meshID, vA, vC);
+    int eCD = cplInterface.setMeshEdge(meshID, vC, vD);
+    int eAD = cplInterface.setMeshEdge(meshID, vA, vD);
+    int eBE = cplInterface.setMeshEdge(meshID, vB, vE);
+    int eBF = cplInterface.setMeshEdge(meshID, vB, vF);
+    int eEF = cplInterface.setMeshEdge(meshID, vE, vF);
+    int eFC = cplInterface.setMeshEdge(meshID, vF, vC);
+
+    cplInterface.setMeshTriangle(meshID, eAB, eBC, eAC);
+    cplInterface.setMeshTriangle(meshID, eAD, eAC, eCD);
+    cplInterface.setMeshTriangle(meshID, eBC, eFC, eBF);
+    cplInterface.setMeshTriangle(meshID, eBE, eEF, eBF);
+
+    double maxDt = cplInterface.initialize();
+
+    double valueA, valueB, valueC, valueD, valueE, valueF;
+    cplInterface.readScalarData(dataID, vA, valueA);
+    cplInterface.readScalarData(dataID, vB, valueB);
+    cplInterface.readScalarData(dataID, vC, valueC);
+    cplInterface.readScalarData(dataID, vD, valueD);
+    cplInterface.readScalarData(dataID, vE, valueE);
+    cplInterface.readScalarData(dataID, vF, valueF);
+
+    double calculatedIntegral = (math::geometry::triangleArea(coordTwoA, coordTwoB, coordTwoC) * (valueA + valueB + valueC) +
+                                 math::geometry::triangleArea(coordTwoA, coordTwoC, coordTwoD) * (valueA + valueC + valueD) +
+                                 math::geometry::triangleArea(coordTwoB, coordTwoC, coordTwoF) * (valueB + valueC + valueF) +
+                                 math::geometry::triangleArea(coordTwoB, coordTwoE, coordTwoF) * (valueB + valueE + valueF)) /
+                                3.0;
+
+    BOOST_TEST(expectedIntegral == calculatedIntegral);
+
+    cplInterface.advance(maxDt);
+    BOOST_TEST(!cplInterface.isCouplingOngoing(), "Sending participant should have to advance once!");
+    cplInterface.finalize();
+
   }
 }
-
 
 BOOST_AUTO_TEST_CASE(ScaledConsistentMappingCase6)
 {
@@ -1879,8 +1878,176 @@ BOOST_AUTO_TEST_CASE(ScaledConsistentMappingCase6)
   }
 }
 
-/*
+// Cannot repartition with triangles, extended filtering fixes the problem
 BOOST_AUTO_TEST_CASE(ScaledConsistentMappingCase7)
+{
+  PRECICE_TEST("SolverOne"_on(1_rank), "SolverTwo"_on(3_ranks));
+  std::string configFilename = _pathToTests + "mapping-scaled-consistent-onB.xml";
+
+  // MeshOne
+  Eigen::Vector3d coordOneA{0.0, 0.0, 0.1};
+  Eigen::Vector3d coordOneB{1.2, 0.0, 0.1};
+  Eigen::Vector3d coordOneC{1.3, 1.0, 0.11};
+  Eigen::Vector3d coordOneD{0.0, 1.0, 0.1};
+  Eigen::Vector3d coordOneE{2.1, 0.0, 0.1};
+  Eigen::Vector3d coordOneF{2.3, 1.0, -0.1};
+
+  double valOneA = 1.0;
+  double valOneB = 3.0;
+  double valOneC = 5.0;
+  double valOneD = 7.0;
+  double valOneE = 9.0;
+  double valOneF = 11.0;
+
+  double expectedIntegral = (math::geometry::triangleArea(coordOneA, coordOneB, coordOneC) * (valOneA + valOneB + valOneC) +
+                             math::geometry::triangleArea(coordOneA, coordOneC, coordOneD) * (valOneA + valOneC + valOneD) +
+                             math::geometry::triangleArea(coordOneB, coordOneC, coordOneF) * (valOneB + valOneC + valOneF) +
+                             math::geometry::triangleArea(coordOneB, coordOneE, coordOneF) * (valOneB + valOneE + valOneF)) /
+                            3.0;
+
+  double calculatedIntegral = 0.0;
+
+  // MeshTwo
+  Eigen::Vector3d coordTwoA{0.0, 0.0, 0.01};
+  Eigen::Vector3d coordTwoB{1.01, 0.0, 0.0};
+  Eigen::Vector3d coordTwoC{1.5, 1.0, 0.01};
+  Eigen::Vector3d coordTwoD{0.0, 1.0, 0.01};
+  Eigen::Vector3d coordTwoE{2.2, 0.0, -0.01};
+  Eigen::Vector3d coordTwoF{2.5, 1.0, 0.01};
+
+  if (context.isNamed("SolverOne")) {
+    SolverInterface cplInterface(context.name, configFilename, context.rank, context.size);
+    const int       meshID = cplInterface.getMeshID("MeshOne");
+    const int       dataID = cplInterface.getDataID("DataOne", meshID);
+
+    int vA = cplInterface.setMeshVertex(meshID, coordOneA.data());
+    int vB = cplInterface.setMeshVertex(meshID, coordOneB.data());
+    int vC = cplInterface.setMeshVertex(meshID, coordOneC.data());
+    int vD = cplInterface.setMeshVertex(meshID, coordOneD.data());
+    int vE = cplInterface.setMeshVertex(meshID, coordOneE.data());
+    int vF = cplInterface.setMeshVertex(meshID, coordOneF.data());
+
+    int eAB = cplInterface.setMeshEdge(meshID, vA, vB);
+    int eBC = cplInterface.setMeshEdge(meshID, vB, vC);
+    int eAC = cplInterface.setMeshEdge(meshID, vA, vC);
+    int eCD = cplInterface.setMeshEdge(meshID, vC, vD);
+    int eAD = cplInterface.setMeshEdge(meshID, vA, vD);
+    int eBE = cplInterface.setMeshEdge(meshID, vB, vE);
+    int eBF = cplInterface.setMeshEdge(meshID, vB, vF);
+    int eEF = cplInterface.setMeshEdge(meshID, vE, vF);
+    int eFC = cplInterface.setMeshEdge(meshID, vF, vC);
+
+    cplInterface.setMeshTriangle(meshID, eAB, eBC, eAC);
+    cplInterface.setMeshTriangle(meshID, eAD, eAC, eCD);
+    cplInterface.setMeshTriangle(meshID, eBC, eFC, eBF);
+    cplInterface.setMeshTriangle(meshID, eBE, eEF, eBF);
+
+    double maxDt = cplInterface.initialize();
+
+    cplInterface.writeScalarData(dataID, vA, valOneA);
+    cplInterface.writeScalarData(dataID, vB, valOneB);
+    cplInterface.writeScalarData(dataID, vC, valOneC);
+    cplInterface.writeScalarData(dataID, vD, valOneD);
+    cplInterface.writeScalarData(dataID, vE, valOneE);
+    cplInterface.writeScalarData(dataID, vF, valOneF);
+
+    cplInterface.advance(maxDt);
+    BOOST_TEST(!cplInterface.isCouplingOngoing(), "Sending participant should have to advance once!");
+    cplInterface.finalize();
+
+  } else {
+    SolverInterface cplInterface(context.name, configFilename, context.rank, context.size);
+    const int       meshID = cplInterface.getMeshID("MeshTwo");
+    const int       dataID = cplInterface.getDataID("DataOne", meshID);
+
+    if (utils::MasterSlave::isMaster()) {
+      int vA = cplInterface.setMeshVertex(meshID, coordTwoA.data());
+      int vB = cplInterface.setMeshVertex(meshID, coordTwoB.data());
+      int vC = cplInterface.setMeshVertex(meshID, coordTwoC.data());
+      int vD = cplInterface.setMeshVertex(meshID, coordTwoD.data());
+
+      int eAB = cplInterface.setMeshEdge(meshID, vA, vB);
+      int eBC = cplInterface.setMeshEdge(meshID, vB, vC);
+      int eAC = cplInterface.setMeshEdge(meshID, vA, vC);
+      int eCD = cplInterface.setMeshEdge(meshID, vC, vD);
+      int eAD = cplInterface.setMeshEdge(meshID, vA, vD);
+
+      cplInterface.setMeshTriangle(meshID, eAB, eBC, eAC);
+      cplInterface.setMeshTriangle(meshID, eAD, eAC, eCD);
+
+      double maxDt = cplInterface.initialize();
+
+      double valueA, valueB, valueC, valueD;
+      cplInterface.readScalarData(dataID, vA, valueA);
+      cplInterface.readScalarData(dataID, vB, valueB);
+      cplInterface.readScalarData(dataID, vC, valueC);
+      cplInterface.readScalarData(dataID, vD, valueD);
+
+      double localCalculatedIntegral = (math::geometry::triangleArea(coordTwoA, coordTwoB, coordTwoC) * (valueA + valueB + valueC) +
+                                        math::geometry::triangleArea(coordTwoA, coordTwoC, coordTwoD) * (valueA + valueC + valueD)) /
+                                       3.0;
+      utils::MasterSlave::allreduceSum(localCalculatedIntegral, calculatedIntegral, 1);
+
+      cplInterface.advance(maxDt);
+      BOOST_TEST(!cplInterface.isCouplingOngoing(), "Receiving participant should have to advance once!");
+      cplInterface.finalize();
+
+    } else if (context.isRank(1)) {
+      int vB = cplInterface.setMeshVertex(meshID, coordTwoB.data());
+      int vE = cplInterface.setMeshVertex(meshID, coordTwoE.data());
+      int vF = cplInterface.setMeshVertex(meshID, coordTwoF.data());
+
+      int eBE = cplInterface.setMeshEdge(meshID, vB, vE);
+      int eBF = cplInterface.setMeshEdge(meshID, vB, vF);
+      int eEF = cplInterface.setMeshEdge(meshID, vE, vF);
+
+      cplInterface.setMeshTriangle(meshID, eBE, eEF, eBF);
+
+      double maxDt = cplInterface.initialize();
+
+      double valueB, valueE, valueF;
+      cplInterface.readScalarData(dataID, vB, valueB);
+      cplInterface.readScalarData(dataID, vE, valueE);
+      cplInterface.readScalarData(dataID, vF, valueF);
+
+      double localCalculatedIntegral = math::geometry::triangleArea(coordTwoB, coordTwoE, coordTwoF) * (valueB + valueE + valueF) / 3.0;
+      utils::MasterSlave::allreduceSum(localCalculatedIntegral, calculatedIntegral, 1);
+
+      cplInterface.advance(maxDt);
+      BOOST_TEST(!cplInterface.isCouplingOngoing(), "Receiving participant should have to advance once!");
+      cplInterface.finalize();
+    } else {
+      int vB = cplInterface.setMeshVertex(meshID, coordTwoB.data());
+      int vC = cplInterface.setMeshVertex(meshID, coordTwoC.data());
+      int vF = cplInterface.setMeshVertex(meshID, coordTwoF.data());
+
+      int eBC = cplInterface.setMeshEdge(meshID, vB, vC);
+      int eBF = cplInterface.setMeshEdge(meshID, vB, vF);
+      int eCF = cplInterface.setMeshEdge(meshID, vC, vF);
+
+      cplInterface.setMeshTriangle(meshID, eBC, eCF, eBF);
+
+      double maxDt = cplInterface.initialize();
+
+      double valueB, valueC, valueF;
+      cplInterface.readScalarData(dataID, vB, valueB);
+      cplInterface.readScalarData(dataID, vC, valueC);
+      cplInterface.readScalarData(dataID, vF, valueF);
+
+      double localCalculatedIntegral = math::geometry::triangleArea(coordTwoB, coordTwoC, coordTwoF) * (valueB + valueC + valueF) / 3.0;
+      utils::MasterSlave::allreduceSum(localCalculatedIntegral, calculatedIntegral, 1);
+
+      cplInterface.advance(maxDt);
+      BOOST_TEST(!cplInterface.isCouplingOngoing(), "Receiving participant should have to advance once!");
+      cplInterface.finalize();
+
+    }
+    BOOST_TEST(calculatedIntegral == expectedIntegral);
+  }
+}
+
+// Cannot repartition with triangles, fails to run even with extended filtering
+BOOST_AUTO_TEST_CASE(ScaledConsistentMappingCase8)
 {
   PRECICE_TEST("SolverOne"_on(2_ranks), "SolverTwo"_on(2_ranks));
   std::string configFilename = _pathToTests + "mapping-scaled-consistent-onB.xml";
@@ -1920,7 +2087,6 @@ BOOST_AUTO_TEST_CASE(ScaledConsistentMappingCase7)
     SolverInterface cplInterface(context.name, configFilename, context.rank, context.size);
     const int       meshID = cplInterface.getMeshID("MeshOne");
     const int       dataID = cplInterface.getDataID("DataOne", meshID);
-    double maxDt;
 
     if(context.isMaster()){
       int vA = cplInterface.setMeshVertex(meshID, coordOneA.data());
@@ -1937,11 +2103,15 @@ BOOST_AUTO_TEST_CASE(ScaledConsistentMappingCase7)
       cplInterface.setMeshTriangle(meshID, eAB, eBC, eAC);
       cplInterface.setMeshTriangle(meshID, eAD, eAC, eCD);
 
-      maxDt = cplInterface.initialize();
+      double maxDt = cplInterface.initialize();
 
       cplInterface.writeScalarData(dataID, vA, valOneA);
       cplInterface.writeScalarData(dataID, vB, valOneB);
       cplInterface.writeScalarData(dataID, vD, valOneD);
+
+      cplInterface.advance(maxDt);
+      BOOST_TEST(!cplInterface.isCouplingOngoing(), "Sending participant should have to advance once!");
+      cplInterface.finalize();
 
     } else {
       int vB = cplInterface.setMeshVertex(meshID, coordOneB.data());
@@ -1958,17 +2128,16 @@ BOOST_AUTO_TEST_CASE(ScaledConsistentMappingCase7)
       cplInterface.setMeshTriangle(meshID, eBC, eFC, eBF);
       cplInterface.setMeshTriangle(meshID, eBE, eEF, eBF);
 
-      maxDt = cplInterface.initialize();
+      double maxDt = cplInterface.initialize();
 
       cplInterface.writeScalarData(dataID, vC, valOneC);
       cplInterface.writeScalarData(dataID, vE, valOneE);
       cplInterface.writeScalarData(dataID, vF, valOneF);
-    }
 
-    cplInterface.advance(maxDt);
-    BOOST_TEST(!cplInterface.isCouplingOngoing(), "Sending participant should have to advance once!");
-    cplInterface.finalize();
-
+      cplInterface.advance(maxDt);
+      BOOST_TEST(!cplInterface.isCouplingOngoing(), "Sending participant should have to advance once!");
+      cplInterface.finalize();
+    }    
   } else {
     SolverInterface cplInterface(context.name, configFilename, context.rank, context.size);
     const int       meshID = cplInterface.getMeshID("MeshTwo");
@@ -2013,15 +2182,15 @@ BOOST_AUTO_TEST_CASE(ScaledConsistentMappingCase7)
       cplInterface.finalize();
 
     } else {
-        int vB = cplInterface.setMeshVertex(meshID, coordTwoB.data());
-        int vE = cplInterface.setMeshVertex(meshID, coordTwoE.data());
-        int vF = cplInterface.setMeshVertex(meshID, coordTwoF.data());
+      int vB = cplInterface.setMeshVertex(meshID, coordTwoB.data());
+      int vE = cplInterface.setMeshVertex(meshID, coordTwoE.data());
+      int vF = cplInterface.setMeshVertex(meshID, coordTwoF.data());
 
-        int eBE = cplInterface.setMeshEdge(meshID, vB, vE);
-        int eBF = cplInterface.setMeshEdge(meshID, vB, vF);
-        int eEF = cplInterface.setMeshEdge(meshID, vE, vF);
+      int eBE = cplInterface.setMeshEdge(meshID, vB, vE);
+      int eBF = cplInterface.setMeshEdge(meshID, vB, vF);
+      int eEF = cplInterface.setMeshEdge(meshID, vE, vF);
 
-        cplInterface.setMeshTriangle(meshID, eBE, eEF, eBF);
+      cplInterface.setMeshTriangle(meshID, eBE, eEF, eBF);
 
       double maxDt = cplInterface.initialize();
 
@@ -2040,7 +2209,7 @@ BOOST_AUTO_TEST_CASE(ScaledConsistentMappingCase7)
     BOOST_TEST(calculatedIntegral == expectedIntegral);
   }
 }
-*/
+
 
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

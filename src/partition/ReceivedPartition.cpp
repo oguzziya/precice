@@ -295,14 +295,14 @@ void ReceivedPartition::filterByBoundingBox()
 
         PRECICE_DEBUG("From slave " << rankSlave << ", bounding mesh: " << slaveBB);
         mesh::Mesh slaveMesh("SlaveMesh", _dimensions, _mesh->isFlipNormals(), mesh::Mesh::MESH_ID_UNDEFINED);
-        mesh::filterMesh(slaveMesh, *_mesh, [&slaveBB](const mesh::Vertex &v) { return slaveBB.contains(v); }, false);
+        mesh::filterMesh(slaveMesh, *_mesh, [&slaveBB](const mesh::Vertex &v) { return slaveBB.contains(v); }, true);
         PRECICE_DEBUG("Send filtered mesh to slave: " << rankSlave);
         com::CommunicateMesh(utils::MasterSlave::_communication).sendMesh(slaveMesh, rankSlave);
       }
 
       // Now also filter the remaining master mesh
       mesh::Mesh filteredMesh("FilteredMesh", _dimensions, _mesh->isFlipNormals(), mesh::Mesh::MESH_ID_UNDEFINED);
-      mesh::filterMesh(filteredMesh, *_mesh, [&](const mesh::Vertex &v) { return _bb.contains(v); }, false);
+      mesh::filterMesh(filteredMesh, *_mesh, [&](const mesh::Vertex &v) { return _bb.contains(v); }, true);
       PRECICE_DEBUG("Master mesh, filtered from "
                     << _mesh->vertices().size() << " to " << filteredMesh.vertices().size() << " vertices, "
                     << _mesh->edges().size() << " to " << filteredMesh.edges().size() << " edges, and "
@@ -332,7 +332,7 @@ void ReceivedPartition::filterByBoundingBox()
       Event e("partition.filterMeshBB." + _mesh->getName(), precice::syncMode);
 
       mesh::Mesh filteredMesh("FilteredMesh", _dimensions, _mesh->isFlipNormals(), mesh::Mesh::MESH_ID_UNDEFINED);
-      mesh::filterMesh(filteredMesh, *_mesh, [&](const mesh::Vertex &v) { return _bb.contains(v); }, false);
+      mesh::filterMesh(filteredMesh, *_mesh, [&](const mesh::Vertex &v) { return _bb.contains(v); }, true);
 
       if (areProvidedMeshesEmpty()) {
         PRECICE_CHECK(not _mesh->vertices().empty(), errorMeshFilteredOut(_mesh->getName()));

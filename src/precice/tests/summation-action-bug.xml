@@ -81,11 +81,11 @@
     
 
     <participant name="Calculix">
-      <use-mesh   name="Solid"     provide="yes"/>
-      <write-data name="Displacements"   mesh="Solid" />
-      <read-data  name="Forces"          mesh="Solid" />
-      <read-data  name="Forces0"           mesh="Solid" />
-      <read-data  name="Target"           mesh="Solid" />
+      <use-mesh   name="Solid"          provide="yes"/>
+      <write-data name="Displacements"  mesh="Solid" />
+      <!--read-data  name="Forces"      mesh="Solid" />-->
+      <!--read-data  name="Forces0"     mesh="Solid" />-->
+      <read-data  name="Target"         mesh="Solid" />
       <action:summation timing="read-mapping-prior" mesh="Solid">
             <source-data name="Forces"/>
             <source-data name="Forces0"/>

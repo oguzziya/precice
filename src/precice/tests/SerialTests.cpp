@@ -1875,17 +1875,9 @@ void testSummationActionBug(const std::string &configFile, TestContext const &co
     Vector3d force0DataA, force0DataB, force0DataC, force0DataD;
     Vector3d targetDataA, targetDataB, targetDataC, targetDataD;
 
-    while (cplInterface.isCouplingOngoing()) {
+    int iterNum = 0;
 
-      cplInterface.readVectorData(forceDataID, solidIdA, forceDataA.data());
-      cplInterface.readVectorData(forceDataID, solidIdB, forceDataB.data());
-      cplInterface.readVectorData(forceDataID, solidIdC, forceDataC.data());
-      cplInterface.readVectorData(forceDataID, solidIdD, forceDataD.data());
-      
-      cplInterface.readVectorData(force0DataID, solidIdA, force0DataA.data());
-      cplInterface.readVectorData(force0DataID, solidIdB, force0DataB.data());
-      cplInterface.readVectorData(force0DataID, solidIdC, force0DataC.data());
-      cplInterface.readVectorData(force0DataID, solidIdD, force0DataD.data());
+    while (cplInterface.isCouplingOngoing()) {
       
       cplInterface.readVectorData(targetDataID, solidIdA, targetDataA.data());
       cplInterface.readVectorData(targetDataID, solidIdB, targetDataB.data());
@@ -1898,18 +1890,14 @@ void testSummationActionBug(const std::string &configFile, TestContext const &co
       cplInterface.writeVectorData(displacementDataID, solidIdD, displacementDataD.data());
 
       dt = cplInterface.advance(dt);
-    
-      //std::cout << "TARGET DATA A IS " << targetDataA << std::endl;
-      //std::cout << "TARGET DATA B IS " << targetDataB << std::endl;
-      //std::cout << "TARGET DATA C IS " << targetDataC << std::endl;
-      //std::cout << "TARGET DATA D IS " << targetDataD << std::endl;
-
-      //BOOST_TEST(targetDataA == expectedDataA);
-      //BOOST_TEST(targetDataB == expectedDataB);
-      //BOOST_TEST(targetDataC == expectedDataC);
-      //BOOST_TEST(targetDataD == expectedDataD);
-
-    
+  
+      if (iterNum > 0) {
+        BOOST_TEST(targetDataA == expectedDataA);
+        BOOST_TEST(targetDataB == expectedDataB);
+        BOOST_TEST(targetDataC == expectedDataC);
+        BOOST_TEST(targetDataD == expectedDataD);
+      }
+      ++iterNum;
     }
     cplInterface.finalize();
   }

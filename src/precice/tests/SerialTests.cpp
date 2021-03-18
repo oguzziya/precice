@@ -1672,6 +1672,249 @@ void testSummationAction(const std::string &configFile, TestContext const &conte
   }
 }
 
+void testSummationActionBug(const std::string &configFile, TestContext const &context)
+{
+  using Eigen::Vector3d;
+
+  if (context.isNamed("XDEM")) {
+    SolverInterface cplInterface(context.name, configFile, 0, 1);
+
+    // Get mesh IDs
+    const int meshIDDomain    = cplInterface.getMeshID("Domain");
+    const int meshIDMembrane  = cplInterface.getMeshID("Membrane-0");
+    const int meshIDFluidPV   = cplInterface.getMeshID("Fluid-Mesh-PV");
+
+    // Get data Ids
+    int    forceDataID = cplInterface.getDataID("Forces", meshIDMembrane);
+    int    displacementDataID = cplInterface.getDataID("Displacements", meshIDMembrane);
+    int    volumePorosityDataID = cplInterface.getDataID("Volume_Porosity", meshIDDomain);
+    int    fluidVelocityDataID = cplInterface.getDataID("Fluid_Velocity", meshIDDomain);
+
+    // Set Domain mesh
+    Vector3d coordDomainA{0.0, 0.0, 0.3};
+    Vector3d coordDomainB{1.0, 0.0, 0.3};
+    Vector3d coordDomainC{1.0, 1.0, 0.3};
+    Vector3d coordDomainD{0.0, 1.0, 0.3};
+
+    int domainIdA = cplInterface.setMeshVertex(meshIDDomain, coordDomainA.data());
+    int domainIdB = cplInterface.setMeshVertex(meshIDDomain, coordDomainB.data());
+    int domainIdC = cplInterface.setMeshVertex(meshIDDomain, coordDomainC.data());
+    int domainIdD = cplInterface.setMeshVertex(meshIDDomain, coordDomainD.data());
+
+    // Set Membrane mesh
+    Vector3d coordMembraneA{0.0, 0.0, 0.3};
+    Vector3d coordMembraneB{1.0, 0.0, 0.3};
+    Vector3d coordMembraneC{1.0, 1.0, 0.3};
+    Vector3d coordMembraneD{0.0, 1.0, 0.3};
+
+    int membraneIdA = cplInterface.setMeshVertex(meshIDMembrane, coordMembraneA.data());
+    int membraneIdB = cplInterface.setMeshVertex(meshIDMembrane, coordMembraneB.data());
+    int membraneIdC = cplInterface.setMeshVertex(meshIDMembrane, coordMembraneC.data());
+    int membraneIdD = cplInterface.setMeshVertex(meshIDMembrane, coordMembraneD.data());
+
+    // Initialize the mesh
+    double dt = cplInterface.initialize();
+
+    // Write data: force and volume porosity
+    Vector3d forceDataA{1.0, 0.0, 0.0};
+    Vector3d forceDataB{2.0, 0.0, 0.0};
+    Vector3d forceDataC{3.0, 0.0, 0.0};
+    Vector3d forceDataD{4.0, 0.0, 0.0};
+
+    double volumePorosityDataA = 1.0;
+    double volumePorosityDataB = 2.0;
+    double volumePorosityDataC = 3.0;
+    double volumePorosityDataD = 4.0;
+
+    Vector3d displacementDataA, displacementDataB, displacementDataC, displacementDataD;
+    Vector3d velocityDataA, velocityDataB, velocityDataC, velocityDataD;
+
+    while (cplInterface.isCouplingOngoing()) {
+
+      cplInterface.readVectorData(fluidVelocityDataID, domainIdA, velocityDataA.data());
+      cplInterface.readVectorData(fluidVelocityDataID, domainIdB, velocityDataB.data());
+      cplInterface.readVectorData(fluidVelocityDataID, domainIdC, velocityDataC.data());
+      cplInterface.readVectorData(fluidVelocityDataID, domainIdD, velocityDataD.data());
+
+      cplInterface.writeScalarData(volumePorosityDataID, domainIdA, volumePorosityDataA);
+      cplInterface.writeScalarData(volumePorosityDataID, domainIdB, volumePorosityDataB);
+      cplInterface.writeScalarData(volumePorosityDataID, domainIdC, volumePorosityDataC);
+      cplInterface.writeScalarData(volumePorosityDataID, domainIdD, volumePorosityDataD);
+
+      cplInterface.writeVectorData(forceDataID, membraneIdA, forceDataA.data());
+      cplInterface.writeVectorData(forceDataID, membraneIdB, forceDataB.data());
+      cplInterface.writeVectorData(forceDataID, membraneIdC, forceDataC.data());
+      cplInterface.writeVectorData(forceDataID, membraneIdD, forceDataD.data());
+
+      cplInterface.readVectorData(displacementDataID, membraneIdA, displacementDataA.data());
+      cplInterface.readVectorData(displacementDataID, membraneIdB, displacementDataB.data());
+      cplInterface.readVectorData(displacementDataID, membraneIdC, displacementDataC.data());
+      cplInterface.readVectorData(displacementDataID, membraneIdD, displacementDataD.data());
+
+      dt = cplInterface.advance(dt);
+    }
+
+    cplInterface.finalize();
+  } else if (context.isNamed("Fluid")) {
+    SolverInterface cplInterface(context.name, configFile, 0, 1);
+
+    // Get mesh IDs
+    const int meshIDFluidNodes    = cplInterface.getMeshID("Fluid-Mesh-Nodes");
+    const int meshIDFluidCenters  = cplInterface.getMeshID("Fluid-Mesh-Centers");
+    const int meshIDFluidPV       = cplInterface.getMeshID("Fluid-Mesh-PV");
+    const int meshIDSolid         = cplInterface.getMeshID("Solid");
+
+    // Get data Ids
+    int    force0DataID = cplInterface.getDataID("Forces0", meshIDFluidCenters);
+    int    displacementDataID = cplInterface.getDataID("Displacements", meshIDFluidNodes);
+    int    volumePorosityDataID = cplInterface.getDataID("Volume_Porosity", meshIDFluidPV);
+    int    fluidVelocityDataID = cplInterface.getDataID("Fluid_Velocity", meshIDFluidPV);
+
+    // Set Domain mesh
+    Vector3d coordFluidMeshA{0.0, 0.0, 0.3};
+    Vector3d coordFluidMeshB{1.0, 0.0, 0.3};
+    Vector3d coordFluidMeshC{1.0, 1.0, 0.3};
+    Vector3d coordFluidMeshD{0.0, 1.0, 0.3};
+
+    int fluidNodesIdA = cplInterface.setMeshVertex(meshIDFluidNodes, coordFluidMeshA.data());
+    int fluidNodesIdB = cplInterface.setMeshVertex(meshIDFluidNodes, coordFluidMeshB.data());
+    int fluidNodesIdC = cplInterface.setMeshVertex(meshIDFluidNodes, coordFluidMeshC.data());
+    int fluidNodesIdD = cplInterface.setMeshVertex(meshIDFluidNodes, coordFluidMeshD.data());
+
+    int fluidCentersIdA = cplInterface.setMeshVertex(meshIDFluidCenters, coordFluidMeshA.data());
+    int fluidCentersIdB = cplInterface.setMeshVertex(meshIDFluidCenters, coordFluidMeshB.data());
+    int fluidCentersIdC = cplInterface.setMeshVertex(meshIDFluidCenters, coordFluidMeshC.data());
+    int fluidCentersIdD = cplInterface.setMeshVertex(meshIDFluidCenters, coordFluidMeshD.data());
+
+    int fluidPVIdA = cplInterface.setMeshVertex(meshIDFluidPV, coordFluidMeshA.data());
+    int fluidPVIdB = cplInterface.setMeshVertex(meshIDFluidPV, coordFluidMeshB.data());
+    int fluidPVIdC = cplInterface.setMeshVertex(meshIDFluidPV, coordFluidMeshC.data());
+    int fluidPVIdD = cplInterface.setMeshVertex(meshIDFluidPV, coordFluidMeshD.data());
+
+    // Initialize the mesh
+    double dt = cplInterface.initialize();
+
+    // Write data: force and volume porosity
+    Vector3d force0DataA{1.0, 0.0, 0.0};
+    Vector3d force0DataB{2.0, 0.0, 0.0};
+    Vector3d force0DataC{3.0, 0.0, 0.0};
+    Vector3d force0DataD{4.0, 0.0, 0.0};
+
+    Vector3d velocityDataA{1.0, 0.0, 0.0};
+    Vector3d velocityDataB{2.0, 0.0, 0.0};
+    Vector3d velocityDataC{3.0, 0.0, 0.0};
+    Vector3d velocityDataD{4.0, 0.0, 0.0};
+
+    Vector3d displacementDataA, displacementDataB, displacementDataC, displacementDataD;
+    double volumePorosityDataA, volumePorosityDataB, volumePorosityDataC, volumePorosityDataD;
+
+    while (cplInterface.isCouplingOngoing()) {
+
+      cplInterface.writeVectorData(fluidVelocityDataID, fluidPVIdA, velocityDataA.data());
+      cplInterface.writeVectorData(fluidVelocityDataID, fluidPVIdB, velocityDataB.data());
+      cplInterface.writeVectorData(fluidVelocityDataID, fluidPVIdC, velocityDataC.data());
+      cplInterface.writeVectorData(fluidVelocityDataID, fluidPVIdD, velocityDataD.data());
+
+      cplInterface.readScalarData(volumePorosityDataID, fluidPVIdA, volumePorosityDataA);
+      cplInterface.readScalarData(volumePorosityDataID, fluidPVIdB, volumePorosityDataB);
+      cplInterface.readScalarData(volumePorosityDataID, fluidPVIdC, volumePorosityDataC);
+      cplInterface.readScalarData(volumePorosityDataID, fluidPVIdD, volumePorosityDataD);
+
+      cplInterface.writeVectorData(force0DataID, fluidCentersIdA, force0DataA.data());
+      cplInterface.writeVectorData(force0DataID, fluidCentersIdB, force0DataB.data());
+      cplInterface.writeVectorData(force0DataID, fluidCentersIdC, force0DataC.data());
+      cplInterface.writeVectorData(force0DataID, fluidCentersIdD, force0DataD.data());
+
+      cplInterface.readVectorData(displacementDataID, fluidNodesIdA, displacementDataA.data());
+      cplInterface.readVectorData(displacementDataID, fluidNodesIdB, displacementDataB.data());
+      cplInterface.readVectorData(displacementDataID, fluidNodesIdC, displacementDataC.data());
+      cplInterface.readVectorData(displacementDataID, fluidNodesIdD, displacementDataD.data());
+
+      dt = cplInterface.advance(dt);
+    }
+    cplInterface.finalize();
+  } else {
+    BOOST_REQUIRE(context.isNamed("Calculix"));
+    SolverInterface cplInterface(context.name, configFile, 0, 1);
+
+    Vector3d expectedDataA{2.0, 0.0, 0.0};
+    Vector3d expectedDataB{4.0, 0.0, 0.0};
+    Vector3d expectedDataC{6.0, 0.0, 0.0};
+    Vector3d expectedDataD{8.0, 0.0, 0.0};
+
+    // Get mesh IDs
+    const int meshIDSolid         = cplInterface.getMeshID("Solid");
+
+    // Get data Ids
+    int    displacementDataID = cplInterface.getDataID("Displacements", meshIDSolid);
+    int    forceDataID = cplInterface.getDataID("Forces", meshIDSolid);
+    int    force0DataID = cplInterface.getDataID("Forces0", meshIDSolid);
+    int    targetDataID = cplInterface.getDataID("Target", meshIDSolid);
+
+    // Set Domain mesh
+    Vector3d coordSolidA{0.0, 0.0, 0.3};
+    Vector3d coordSolidB{1.0, 0.0, 0.3};
+    Vector3d coordSolidC{1.0, 1.0, 0.3};
+    Vector3d coordSolidD{0.0, 1.0, 0.3};
+
+    int solidIdA = cplInterface.setMeshVertex(meshIDSolid, coordSolidA.data());
+    int solidIdB = cplInterface.setMeshVertex(meshIDSolid, coordSolidB.data());
+    int solidIdC = cplInterface.setMeshVertex(meshIDSolid, coordSolidC.data());
+    int solidIdD = cplInterface.setMeshVertex(meshIDSolid, coordSolidD.data());
+
+    // Initialize the mesh
+    double dt = cplInterface.initialize();
+
+    // Write data: force and volume porosity
+    Vector3d displacementDataA{1.0, 0.0, 0.0};
+    Vector3d displacementDataB{2.0, 0.0, 0.0};
+    Vector3d displacementDataC{3.0, 0.0, 0.0};
+    Vector3d displacementDataD{4.0, 0.0, 0.0};
+
+    Vector3d forceDataA, forceDataB, forceDataC, forceDataD;
+    Vector3d force0DataA, force0DataB, force0DataC, force0DataD;
+    Vector3d targetDataA, targetDataB, targetDataC, targetDataD;
+
+    while (cplInterface.isCouplingOngoing()) {
+
+      cplInterface.readVectorData(forceDataID, solidIdA, forceDataA.data());
+      cplInterface.readVectorData(forceDataID, solidIdB, forceDataB.data());
+      cplInterface.readVectorData(forceDataID, solidIdC, forceDataC.data());
+      cplInterface.readVectorData(forceDataID, solidIdD, forceDataD.data());
+      
+      cplInterface.readVectorData(force0DataID, solidIdA, force0DataA.data());
+      cplInterface.readVectorData(force0DataID, solidIdB, force0DataB.data());
+      cplInterface.readVectorData(force0DataID, solidIdC, force0DataC.data());
+      cplInterface.readVectorData(force0DataID, solidIdD, force0DataD.data());
+      
+      cplInterface.readVectorData(targetDataID, solidIdA, targetDataA.data());
+      cplInterface.readVectorData(targetDataID, solidIdB, targetDataB.data());
+      cplInterface.readVectorData(targetDataID, solidIdC, targetDataC.data());
+      cplInterface.readVectorData(targetDataID, solidIdD, targetDataD.data());
+
+      cplInterface.writeVectorData(displacementDataID, solidIdA, displacementDataA.data());
+      cplInterface.writeVectorData(displacementDataID, solidIdB, displacementDataB.data());
+      cplInterface.writeVectorData(displacementDataID, solidIdC, displacementDataC.data());
+      cplInterface.writeVectorData(displacementDataID, solidIdD, displacementDataD.data());
+
+      dt = cplInterface.advance(dt);
+    
+      //std::cout << "TARGET DATA A IS " << targetDataA << std::endl;
+      //std::cout << "TARGET DATA B IS " << targetDataB << std::endl;
+      //std::cout << "TARGET DATA C IS " << targetDataC << std::endl;
+      //std::cout << "TARGET DATA D IS " << targetDataD << std::endl;
+
+      //BOOST_TEST(targetDataA == expectedDataA);
+      //BOOST_TEST(targetDataB == expectedDataB);
+      //BOOST_TEST(targetDataC == expectedDataC);
+      //BOOST_TEST(targetDataD == expectedDataD);
+
+    
+    }
+    cplInterface.finalize();
+  }
+}
+
 /**
  * @brief Test for summation action
  *
@@ -1681,6 +1924,17 @@ BOOST_AUTO_TEST_CASE(testSummationActionTwoSources)
   PRECICE_TEST("SolverTarget"_on(1_rank), "SolverSourceOne"_on(1_rank), "SolverSourceTwo"_on(1_rank));
   const std::string configFile = _pathToTests + "summation-action.xml";
   testSummationAction(configFile, context);
+}
+
+/**
+ * @brief Test for summation action
+ *
+ */
+BOOST_AUTO_TEST_CASE(testSummationActionBugCase)
+{
+  PRECICE_TEST("XDEM"_on(1_rank), "Fluid"_on(1_rank), "Calculix"_on(1_rank));
+  const std::string configFile = _pathToTests + "summation-action-bug.xml";
+  testSummationActionBug(configFile, context);
 }
 
 void testWatchIntegral(const std::string &configFile, TestContext &context)

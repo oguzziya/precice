@@ -1,0 +1,127 @@
+<?xml version="1.0"?>
+
+<precice-configuration>
+
+  <log>
+    <sink type="stream" output="stdout"  filter= "%Severity% > debug" format="preCICE:%ColorizedSeverity% %Message%" enabled="true" />	
+  </log>
+
+  <solver-interface dimensions="3" >
+   
+    <data:vector name="Forces0"  />
+    <data:vector name="Forces"  />
+    <data:vector name="Displacements"  />
+    <data:scalar name="Volume_Porosity"  />
+    <data:vector name="Fluid_Velocity"  />
+    <data:vector name="Target"  />
+
+    <mesh name="Membrane-0">
+      <use-data name="Forces" />
+      <use-data name="Displacements" />
+    </mesh>
+    
+    <mesh name="Domain">
+     <use-data name="Volume_Porosity" />
+     <use-data name="Fluid_Velocity" />
+    </mesh>
+
+    <mesh name="Solid">
+      <use-data name="Forces"/>
+      <use-data name="Forces0"/>
+      <use-data name="Displacements"/>
+      <use-data name="Target"/>
+    </mesh>
+
+    <mesh name="Fluid-Mesh-Centers">
+      <use-data name="Forces0"/>
+     </mesh>
+   
+    <mesh name="Fluid-Mesh-Nodes">
+      <use-data name="Displacements"/>
+    </mesh>
+    
+    <mesh name="Fluid-Mesh-PV">
+      <use-data name="Fluid_Velocity"/>
+      <use-data name="Volume_Porosity"/>
+    </mesh>
+    
+
+    <participant name="XDEM">
+      <use-mesh   name="Membrane-0"      provide="yes"/>
+      <use-mesh   name="Domain"          provide="yes"/>
+      <use-mesh   name="Solid"           from="Calculix"/>
+      <write-data name="Forces"          mesh="Membrane-0" />
+      <read-data  name="Displacements"   mesh="Membrane-0" />
+      <mapping:nearest-neighbor   direction="write" from="Membrane-0"   to="Solid"  constraint="conservative"/>
+      <mapping:nearest-projection direction="read"  from="Solid"  to="Membrane-0"   constraint="consistent" />
+      
+      <use-mesh   name="Fluid-Mesh-PV"   from="Fluid"/>
+      <write-data name="Volume_Porosity" mesh="Domain" />
+      <read-data  name="Fluid_Velocity"  mesh="Domain" />
+            
+      <mapping:nearest-neighbor   direction="write" from="Domain"   to="Fluid-Mesh-PV" constraint="consistent" timing="onadvance"/>
+      <mapping:nearest-projection direction="read"  from="Fluid-Mesh-PV" to="Domain"   constraint="consistent" timing="onadvance"/>
+    </participant>
+    
+
+    
+    <participant name="Fluid">
+      <use-mesh   name="Fluid-Mesh-Nodes"   provide="yes"/>
+      <use-mesh   name="Fluid-Mesh-Centers" provide="yes"/>
+      <use-mesh   name="Fluid-Mesh-PV"      provide="yes"/>
+      <read-data  name="Volume_Porosity"    mesh="Fluid-Mesh-PV" />
+      <write-data name="Fluid_Velocity"     mesh="Fluid-Mesh-PV" />
+
+      <use-mesh   name="Solid"              from="Calculix"/>
+      <write-data name="Forces0"            mesh="Fluid-Mesh-Centers" />
+      <read-data  name="Displacements"      mesh="Fluid-Mesh-Nodes" />
+      <mapping:nearest-neighbor   direction="write" from="Fluid-Mesh-Centers"   to="Solid"     constraint="conservative"/>
+      <mapping:nearest-projection direction="read"  from="Solid"     to="Fluid-Mesh-Nodes"   constraint="consistent" />
+    </participant>    
+    
+
+    <participant name="Calculix">
+      <use-mesh   name="Solid"     provide="yes"/>
+      <write-data name="Displacements"   mesh="Solid" />
+      <read-data  name="Forces"          mesh="Solid" />
+      <read-data  name="Forces0"           mesh="Solid" />
+      <read-data  name="Target"           mesh="Solid" />
+      <action:summation timing="read-mapping-prior" mesh="Solid">
+            <source-data name="Forces"/>
+            <source-data name="Forces0"/>
+            <target-data name="Target"/>
+      </action:summation>
+    </participant>
+     
+    <m2n:sockets from="Fluid" to="XDEM"    />
+    <m2n:sockets from="XDEM"  to="Calculix"   />
+    <m2n:sockets from="Fluid" to="Calculix"   />
+         
+    <coupling-scheme:parallel-explicit>
+      <participants first="Fluid" second="XDEM" />
+      <max-time value="5" />
+      <time-window-size value="1" />
+      <exchange data="Volume_Porosity" mesh="Fluid-Mesh-PV" from="XDEM" to="Fluid" />
+      <exchange data="Fluid_Velocity"  mesh="Fluid-Mesh-PV" from="Fluid" to="XDEM"/>
+    </coupling-scheme:parallel-explicit>
+    
+    <coupling-scheme:parallel-explicit> 
+      <participants first="XDEM" second="Calculix" />
+      <max-time value="5" />
+      <time-window-size value="1" />
+      <exchange data="Forces"          mesh="Solid" from="XDEM" to="Calculix" />
+      <exchange data="Displacements"   mesh="Solid" from="Calculix" to="XDEM"/>
+    </coupling-scheme:parallel-explicit>
+
+    <coupling-scheme:parallel-explicit>
+      <participants first="Fluid" second="Calculix" />
+      <max-time value="5" />
+      <time-window-size value="1" />
+      <exchange data="Forces0"        mesh="Solid" from="Fluid" to="Calculix" />
+      <exchange data="Displacements" mesh="Solid" from="Calculix" to="Fluid"/>
+    </coupling-scheme:parallel-explicit>
+
+  </solver-interface>
+
+</precice-configuration>
+

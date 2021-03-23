@@ -13,15 +13,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - CONFIG: Bare
-            CXX: 'clang++'
-            TYPE: Debug
-          - CONFIG: MPI
+          - CONFIG: MPIPETSc
             CXX: 'clang++'
             TYPE: Debug
           - CONFIG: MPIPETSc
             CXX: 'clang++'
-            TYPE: Debug
+            TYPE: Release
     steps:
     - name: Generate build directory
       run: mkdir -p build

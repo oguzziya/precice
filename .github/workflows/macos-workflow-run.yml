@@ -1,8 +1,0 @@
-name: macOS Workflow Run
-
-on:
-  workflow_run:
-    workflows: ["Build and Test macOS"]
-    types:
-      - completed
-      - requested

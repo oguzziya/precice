@@ -5,7 +5,8 @@ on:
       - master
       - develop
       - macos-ci-test
-
+  workflow_dispatch:
+    
 jobs:
   build:
     name: ${{ format('{0} {1} {2}', matrix.CXX, matrix.CONFIG, matrix.TYPE) }}

@@ -14,15 +14,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - CONFIG: Bare
-            CXX: 'clang++'
-            TYPE: Debug
-          - CONFIG: MPI
+          - CONFIG: MPIPETSc
             CXX: 'clang++'
             TYPE: Debug
           - CONFIG: MPIPETSc
             CXX: 'clang++'
-            TYPE: Debug
+            TYPE: Release
     steps:
     - name: Generate build directory
       run: mkdir -p build
@@ -35,7 +32,7 @@ jobs:
         PETSc: ${{ contains(matrix.CONFIG, 'PETSc') }}
       run: |
         cmake --version
-        cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug -DPRECICE_MPICommunication=${{ env.MPI }} -DPRECICE_PETScMapping=${{ env.PETSc }} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
+        cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=${{ matrix.TYPE }} -DPRECICE_MPICommunication=${{ env.MPI }} -DPRECICE_PETScMapping=${{ env.PETSc }} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
     - uses: actions/upload-artifact@v2
       if: failure()
       with:

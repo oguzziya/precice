@@ -82,34 +82,31 @@ int Mapping::getDimensions() const
 
 void Mapping::scaleConsistentMapping(int inputDataID, int outputDataID) const
 {
+  // Only serial participant is supported for scale-consistent mapping
+  PRECICE_ASSERT((not utils::MasterSlave::isMaster()) and (not utils::MasterSlave::isSlave()));
+
   // If rank is not empty and do not contain connectivity information, raise error
   if ((input()->edges().empty() and (not input()->vertices().empty())) or
       (((input()->getDimensions() == 3) and input()->triangles().empty()) and (not input()->vertices().empty()))) {
     logging::Logger _log{"mapping::Mapping"};
-    PRECICE_ERROR("Connectivity information is missing for the mesh " << input()->getName() << ". Scaled consistent mapping requires connectivity information.");
+    PRECICE_ERROR("Connectivity information is missing for the mesh {}. "
+                  "Scaled consistent mapping requires connectivity information.",
+                  input()->getName());
   }
   if ((output()->edges().empty() and (not output()->vertices().empty())) or
       (((output()->getDimensions() == 3) and output()->triangles().empty()) and (not output()->vertices().empty()))) {
     logging::Logger _log{"mapping::Mapping"};
-    PRECICE_ERROR("Connectivity information is missing for the mesh " << output()->getName() << ". Scaled consistent mapping requires connectivity information.");
+    PRECICE_ERROR("Connectivity information is missing for the mesh {}. "
+                  "Scaled consistent mapping requires connectivity information.",
+                  output()->getName());
   }
 
   auto &outputValues    = output()->data(outputDataID)->values();
   int   valueDimensions = input()->data(inputDataID)->getDimensions();
 
   // Integral is calculated on each direction separately
-  auto integralInput  = mesh::integrateOwner(input(), input()->data(inputDataID));
+  auto integralInput  = mesh::integrate(input(), input()->data(inputDataID));
   auto integralOutput = mesh::integrate(output(), output()->data(outputDataID));
-
-  // If the mesh is distributed, we need to calculate the global integral
-  if (utils::MasterSlave::isMaster() or utils::MasterSlave::isSlave()) {
-    Eigen::VectorXd globalInputIntegral(valueDimensions);
-    Eigen::VectorXd globalOutputIntegral(valueDimensions);
-    utils::MasterSlave::allreduceSum(integralInput.data(), globalInputIntegral.data(), integralInput.size());
-    utils::MasterSlave::allreduceSum(integralOutput.data(), globalOutputIntegral.data(), integralOutput.size());
-    integralInput  = globalInputIntegral;
-    integralOutput = globalOutputIntegral;
-  }
 
   // Create reshape the output values vector to matrix
   Eigen::Map<Eigen::MatrixXd> outputValuesMatrix(outputValues.data(), valueDimensions, outputValues.size() / valueDimensions);

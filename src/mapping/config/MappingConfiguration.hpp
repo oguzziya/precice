@@ -67,8 +67,8 @@ public:
   };
 
   MappingConfiguration(
-      xml::XMLTag &                     parent,
-      const mesh::PtrMeshConfiguration &meshConfiguration);
+      xml::XMLTag &              parent,
+      mesh::PtrMeshConfiguration meshConfiguration);
 
   /**
    * @brief Callback function required for use of automatic configuration.
@@ -158,6 +158,7 @@ private:
       Polynomial                       polynomial,
       Preallocation                    preallocation) const;
 
+  /// Check whether a mapping to and from the same mesh already exists
   void checkDuplicates(const ConfiguredMapping &mapping);
 
   Timing getTiming(const std::string &timing) const;

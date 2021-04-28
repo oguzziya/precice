@@ -213,7 +213,6 @@ BOOST_AUTO_TEST_CASE(ScaledConsistentNonIncremental)
   mapping.setMeshes(inMesh, outMesh);
   BOOST_TEST(mapping.hasComputedMapping() == false);
 
-  // Map data with coinciding vertices, has to result in equal values.
   mapping.computeMapping();
   mapping.map(inDataID, outDataID);
 
@@ -228,6 +227,7 @@ BOOST_AUTO_TEST_CASE(ScaledConsistentNonIncremental)
   }
 
   double scaleFactor = outValues(0) / inValues(0);
+  BOOST_TEST(scaleFactor != 1.0);
 
   BOOST_TEST(inValues(0) * scaleFactor == outValues(0));
   BOOST_TEST(inValues(1) * scaleFactor == outValues(1));

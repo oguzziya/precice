@@ -5,19 +5,11 @@
 #include <Eigen/Core>
 #include <Eigen/QR>
 
-#include <boost/version.hpp>
-#if BOOST_VERSION < 106600
-#include <boost/function_output_iterator.hpp>
-#else
-#include <boost/iterator/function_output_iterator.hpp>
-#endif
-
 #include "com/CommunicateMesh.hpp"
 #include "com/Communication.hpp"
 #include "impl/BasisFunctions.hpp"
 #include "mesh/Filter.hpp"
-#include "mesh/RTree.hpp"
-#include "mesh/impl/BBUtils.hpp"
+#include "query/Index.hpp"
 #include "utils/EigenHelperFunctions.hpp"
 #include "utils/Event.hpp"
 #include "utils/MasterSlave.hpp"
@@ -200,16 +192,16 @@ void RadialBasisFctMapping<RADIAL_BASIS_FUNCTION_T>::computeMapping()
     _matrixA = buildMatrixA(_basisFunction, globalInMesh, globalOutMesh, _deadAxis);
     _qr      = buildMatrixCLU(_basisFunction, globalInMesh, _deadAxis).colPivHouseholderQr();
 
-    if (not _qr.isInvertible()) {
-      PRECICE_ERROR("The interpolation matrix of the RBF mapping from mesh " << input()->getName() << " to mesh "
-                                                                             << output()->getName() << " is not invertable. This means that the mapping problem is not well-posed. "
-                                                                             << "Please check if your coupling meshes are correct. Maybe you need to fix axis-aligned mapping setups "
-                                                                             << "by marking perpendicular axes as dead?");
-    }
+    PRECICE_CHECK(_qr.isInvertible(),
+                  "The interpolation matrix of the RBF mapping from mesh {} to mesh {} is not invertable. "
+                  "This means that the mapping problem is not well-posed. "
+                  "Please check if your coupling meshes are correct. Maybe you need to fix axis-aligned mapping setups "
+                  "by marking perpendicular axes as dead?",
+                  input()->getName(), output()->getName());
   }
   _hasComputedMapping = true;
   PRECICE_DEBUG("Compute Mapping is Completed.");
-}
+} // namespace mapping
 
 template <typename RADIAL_BASIS_FUNCTION_T>
 bool RadialBasisFctMapping<RADIAL_BASIS_FUNCTION_T>::hasComputedMapping() const
@@ -499,16 +491,12 @@ void RadialBasisFctMapping<RADIAL_BASIS_FUNCTION_T>::tagMeshFirstRound()
   // Tags all vertices that are inside otherMesh's bounding box, enlarged by the support radius
 
   if (_basisFunction.hasCompactSupport()) {
-
-    auto rtree    = mesh::rtree::getVertexRTree(filterMesh);
-    namespace bgi = boost::geometry::index;
-    auto bb       = otherMesh->getBoundingBox();
-    // Enlarge by support radius
+    auto bb = otherMesh->getBoundingBox();
     bb.expandBy(_basisFunction.getSupportRadius());
-    rtree->query(bgi::intersects(toRTreeBox(bb)),
-                 boost::make_function_output_iterator([&filterMesh](size_t idx) {
-                   filterMesh->vertices()[idx].tag();
-                 }));
+
+    query::Index indexTree(filterMesh);
+    auto         vertices = indexTree.getVerticesInsideBox(bb);
+    std::for_each(vertices.begin(), vertices.end(), [&filterMesh](size_t v) { filterMesh->vertices()[v].tag(); });
   } else {
     filterMesh->tagAll();
   }
@@ -518,7 +506,6 @@ template <typename RADIAL_BASIS_FUNCTION_T>
 void RadialBasisFctMapping<RADIAL_BASIS_FUNCTION_T>::tagMeshSecondRound()
 {
   PRECICE_TRACE();
-  namespace bgi = boost::geometry::index;
 
   if (not _basisFunction.hasCompactSupport())
     return; // Tags should not be changed
@@ -542,12 +529,9 @@ void RadialBasisFctMapping<RADIAL_BASIS_FUNCTION_T>::tagMeshSecondRound()
   }
   // Enlarge bb by support radius
   bb.expandBy(_basisFunction.getSupportRadius());
-  auto rtree = mesh::rtree::getVertexRTree(mesh);
-
-  rtree->query(bgi::intersects(toRTreeBox(bb)),
-               boost::make_function_output_iterator([&mesh](size_t idx) {
-                 mesh->vertices()[idx].tag();
-               }));
+  query::Index indexTree(mesh);
+  auto         vertices = indexTree.getVerticesInsideBox(bb);
+  std::for_each(vertices.begin(), vertices.end(), [&mesh](size_t v) { mesh->vertices()[v].tag(); });
 }
 
 // ------- Non-Member Functions ---------

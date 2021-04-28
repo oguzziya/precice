@@ -10,22 +10,22 @@
 #include <utility>
 #include <vector>
 #include "Edge.hpp"
-#include "RTree.hpp"
 #include "Triangle.hpp"
 #include "logging/LogMacros.hpp"
 #include "math/geometry.hpp"
 #include "mesh/Data.hpp"
+#include "query/Index.hpp"
 #include "utils/EigenHelperFunctions.hpp"
 
 namespace precice {
 namespace mesh {
 
 Mesh::Mesh(
-    const std::string &name,
-    int                dimensions,
-    bool               flipNormals,
-    int                id)
-    : _name(name),
+    std::string name,
+    int         dimensions,
+    bool        flipNormals,
+    int         id)
+    : _name(std::move(name)),
       _dimensions(dimensions),
       _flipNormals(flipNormals),
       _id(id),
@@ -34,8 +34,8 @@ Mesh::Mesh(
   PRECICE_ASSERT((_dimensions == 2) || (_dimensions == 3), _dimensions);
   PRECICE_ASSERT(_name != std::string(""));
 
-  meshChanged.connect([](Mesh &m) { rtree::clear(m); });
-  meshDestroyed.connect([](Mesh &m) { rtree::clear(m); });
+  meshChanged.connect([](Mesh &m) { query::clearCache(m); });
+  meshDestroyed.connect([](Mesh &m) { query::clearCache(m); });
 }
 
 Mesh::~Mesh()
@@ -78,11 +78,20 @@ int Mesh::getDimensions() const
   return _dimensions;
 }
 
+Vertex &Mesh::createVertex(const Eigen::VectorXd &coords)
+{
+  PRECICE_ASSERT(coords.size() == _dimensions, coords.size(), _dimensions);
+  auto nextID = _vertices.size();
+  _vertices.emplace_back(coords, nextID);
+  return _vertices.back();
+}
+
 Edge &Mesh::createEdge(
     Vertex &vertexOne,
     Vertex &vertexTwo)
 {
-  _edges.emplace_back(vertexOne, vertexTwo, _manageEdgeIDs.getFreeID());
+  auto nextID = _edges.size();
+  _edges.emplace_back(vertexOne, vertexTwo, nextID);
   return _edges.back();
 }
 
@@ -113,7 +122,8 @@ Triangle &Mesh::createTriangle(
       edgeOne.connectedTo(edgeTwo) &&
       edgeTwo.connectedTo(edgeThree) &&
       edgeThree.connectedTo(edgeOne));
-  _triangles.emplace_back(edgeOne, edgeTwo, edgeThree, _manageTriangleIDs.getFreeID());
+  auto nextID = _triangles.size();
+  _triangles.emplace_back(edgeOne, edgeTwo, edgeThree, nextID);
   return _triangles.back();
 }
 
@@ -124,8 +134,9 @@ PtrData &Mesh::createData(
   PRECICE_TRACE(name, dimension);
   for (const PtrData &data : _data) {
     PRECICE_CHECK(data->getName() != name,
-                  "Data \"" << name << "\" cannot be created twice for "
-                            << "mesh \"" << _name << "\". Please rename or remove one of the use-data tags with name \"" << name << "\".");
+                  "Data \"{}\" cannot be created twice for mesh \"{}\". "
+                  "Please rename or remove one of the use-data tags with name \"{}\".",
+                  name, _name, name);
   }
   int     id = Data::getDataCount();
   PtrData data(new Data(name, id, dimension));
@@ -144,7 +155,7 @@ const PtrData &Mesh::data(
   auto iter = std::find_if(_data.begin(), _data.end(), [dataID](PtrData const &ptr) {
     return ptr->getID() == dataID;
   });
-  PRECICE_ASSERT(iter != _data.end(), "Data with ID = " << dataID << " not found in mesh \"" << _name << "\".");
+  PRECICE_ASSERT(iter != _data.end(), "Data with id not found in mesh.", dataID, _name);
   return *iter;
 }
 
@@ -184,7 +195,7 @@ void Mesh::allocateDataValues()
   PRECICE_TRACE(_vertices.size());
   const auto expectedCount = _vertices.size();
   using SizeType           = std::remove_cv<decltype(expectedCount)>::type;
-  for (PtrData data : _data) {
+  for (PtrData &data : _data) {
     const SizeType expectedSize = expectedCount * data->getDimensions();
     const auto     actualSize   = static_cast<SizeType>(data->values().size());
     // Shrink Buffer
@@ -196,7 +207,7 @@ void Mesh::allocateDataValues()
       const auto leftToAllocate = expectedSize - actualSize;
       utils::append(data->values(), (Eigen::VectorXd) Eigen::VectorXd::Zero(leftToAllocate));
     }
-    PRECICE_DEBUG("Data " << data->getName() << " now has " << data->values().size() << " values");
+    PRECICE_DEBUG("Data {} now has {} values", data->getName(), data->values().size());
   }
 }
 
@@ -208,7 +219,7 @@ void Mesh::computeBoundingBox()
     bb.expandBy(vertex);
   }
   _boundingBox = std::move(bb);
-  PRECICE_DEBUG("Bounding Box, " << _boundingBox);
+  PRECICE_DEBUG("Bounding Box, {}", _boundingBox);
 }
 
 void Mesh::computeState()
@@ -279,13 +290,9 @@ void Mesh::clear()
   _edges.clear();
   _vertices.clear();
 
-  _manageTriangleIDs.resetIDs();
-  _manageEdgeIDs.resetIDs();
-  _manageVertexIDs.resetIDs();
-
   meshChanged(*this);
 
-  for (mesh::PtrData data : _data) {
+  for (mesh::PtrData &data : _data) {
     data->values().resize(0);
   }
 }

@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(DivideByArea)
   BOOST_TEST(values(2) == 8.0);
 }
 
-BOOST_AUTO_TEST_CASE(ScaleByComputedTimestepLength)
+BOOST_AUTO_TEST_CASE(ScaleByTimeStepSizeToTimeWindowSize)
 {
   PRECICE_TEST(1_rank);
   using namespace mesh;
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(ScaleByComputedTimestepLength)
 
   action::ScaleByDtAction scale(
       action::ScaleByDtAction::WRITE_MAPPING_POST, sourceDataID, targetDataID, mesh,
-      action::ScaleByDtAction::SCALING_BY_COMPUTED_DT_RATIO);
+      action::ScaleByDtAction::SCALING_BY_TIME_STEP_TO_TIME_WINDOW_RATIO);
 
   scale.performAction(0.0, 0.0, 0.0, 1.0);
   BOOST_TEST(sourceValues(0) == 2.0);
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(ScaleByComputedTimestepLength)
   BOOST_TEST(targetValues(2) == 1.0);
 }
 
-BOOST_AUTO_TEST_CASE(ScaleByComputedTimestepPartLength)
+BOOST_AUTO_TEST_CASE(ScaleByComputedTimeWindowPart)
 {
   PRECICE_TEST(1_rank);
   using namespace mesh;
@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(ScaleByComputedTimestepPartLength)
 
   action::ScaleByDtAction scale(
       action::ScaleByDtAction::WRITE_MAPPING_POST, sourceDataID, targetDataID, mesh,
-      action::ScaleByDtAction::SCALING_BY_COMPUTED_DT_PART_RATIO);
+      action::ScaleByDtAction::SCALING_BY_COMPUTED_TIME_WINDOW_PART_RATIO);
 
   scale.performAction(0.0, 0.0, 0.0, 1.0);
   BOOST_TEST(sourceValues(0) == 2.0);
@@ -178,8 +178,8 @@ BOOST_AUTO_TEST_CASE(Configuration)
     action::ActionConfiguration config(tag, meshConfig);
     xml::configure(tag, xml::ConfigurationContext{}, filename);
     BOOST_TEST(config.actions().size() == 1);
-    action::PtrAction action = config.actions().front();
-    BOOST_TEST(action);
+    auto &action = config.actions().front();
+    BOOST_TEST(static_cast<bool>(action));
   }
   {
     std::string                filename = testing::getPathToSources() + "/action/tests/ScaleActionTest-testConfiguration-2.xml";
@@ -191,8 +191,8 @@ BOOST_AUTO_TEST_CASE(Configuration)
     action::ActionConfiguration config(tag, meshConfig);
     xml::configure(tag, xml::ConfigurationContext{}, filename);
     BOOST_TEST(config.actions().size() == 1);
-    action::PtrAction action = config.actions().front();
-    BOOST_TEST(action);
+    auto &action = config.actions().front();
+    BOOST_TEST(static_cast<bool>(action));
   }
   {
     std::string                filename = testing::getPathToSources() + "/action/tests/ScaleActionTest-testConfiguration-3.xml";
@@ -204,8 +204,8 @@ BOOST_AUTO_TEST_CASE(Configuration)
     action::ActionConfiguration config(tag, meshConfig);
     xml::configure(tag, xml::ConfigurationContext{}, filename);
     BOOST_TEST(config.actions().size() == 1);
-    action::PtrAction action = config.actions().front();
-    BOOST_TEST(action);
+    auto &action = config.actions().front();
+    BOOST_TEST(static_cast<bool>(action));
   }
   {
     std::string                filename = testing::getPathToSources() + "/action/tests/ScaleActionTest-testConfiguration-4.xml";
@@ -217,8 +217,8 @@ BOOST_AUTO_TEST_CASE(Configuration)
     action::ActionConfiguration config(tag, meshConfig);
     xml::configure(tag, xml::ConfigurationContext{}, filename);
     BOOST_TEST(config.actions().size() == 1);
-    action::PtrAction action = config.actions().front();
-    BOOST_TEST(action);
+    auto &action = config.actions().front();
+    BOOST_TEST(static_cast<bool>(action));
   }
 }
 

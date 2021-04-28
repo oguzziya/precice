@@ -7,6 +7,7 @@
 #include "io/SharedPointer.hpp"
 #include "logging/Logger.hpp"
 #include "mapping/SharedPointer.hpp"
+#include "mapping/config/MappingConfiguration.hpp"
 #include "mesh/SharedPointer.hpp"
 #include "partition/ReceivedPartition.hpp"
 #include "precice/impl/Participant.hpp"
@@ -23,8 +24,8 @@ namespace config {
 class ParticipantConfiguration : public xml::XMLTag::Listener {
 public:
   ParticipantConfiguration(
-      xml::XMLTag &                     parent,
-      const mesh::PtrMeshConfiguration &meshConfiguration);
+      xml::XMLTag &              parent,
+      mesh::PtrMeshConfiguration meshConfiguration);
 
   void setDimensions(int dimensions);
 
@@ -131,6 +132,11 @@ private:
   void finishParticipantConfiguration(
       const xml::ConfigurationContext &context,
       const impl::PtrParticipant &     participant);
+
+  /// Check whether a mapping to the same mesh and with similar data fields already exists
+  void checkIllDefinedMappings(
+      const mapping::MappingConfiguration::ConfiguredMapping &mapping,
+      const impl::PtrParticipant &                            participant);
 };
 
 } // namespace config
